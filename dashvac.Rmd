@@ -1,0 +1,171 @@
+---
+title: "Vacinação COVID-19 no Brasil e no mundo "
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    vertical_layout: scroll
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(leaflet)
+library(tidyverse)
+library(maps)
+library(lubridate)
+library(jsonlite)
+```
+
+```{r, echo=FALSE}
+brasil <- rgdal::readOGR("data/br-states.json")
+
+casos <- read.csv("data/cases-brazil-states.csv")
+casos$vacc_per <- casos$vaccinated_per_100k_inhabitants/1000
+casos$death_per <- casos$deaths_per_100k_inhabitants/1000
+casos$cases_per <- casos$totalCases_per_100k_inhabitants/1000
+
+casos$date <- ymd(casos$date)
+
+temp <- casos %>% group_by(state) %>%
+  summarise(data = max(date))
+
+temp1 <- merge(temp, casos, by.x = c("state", "data"), by.y = c("state", "date"), all.x = TRUE)
+base <- merge(brasil, temp1, by.x ="id", by.y = "state" )
+
+range <- ceiling(max(base$vacc_per, na.rm=TRUE) - min(base$vacc_per, na.rm=TRUE))
+passo <- range/8
+passo <- round(passo, 3)
+bins <- 0
+for (i in 1:8){
+  t <- i*passo
+  bins <- c(bins, t)
+}
+
+pal <- colorBin("YlGnBu", domain = base$vacc_per, bins = bins)
+
+labels <- sprintf(
+  "<strong>%s</strong><br/>%g vacinados por 100 habitantes",
+  base$id, round(base$vacc_per, 2)
+) %>% lapply(htmltools::HTML)
+```
+
+
+Row 
+-----------------------------------------------------------------------
+
+### Vacinados
+
+```{r, warning=FALSE}
+leaflet(brasil,
+               options = leafletOptions(minZoom = 2)) %>%
+  setView(lng = -47.883 , lat = -15.793, zoom = 3.2) %>%
+  addProviderTiles(providers$CartoDB.Positron) %>%
+  addPolygons(
+  fillColor = ~pal(base$vacc_per),
+  weight = 2,
+  opacity = 1,
+  color = "white",
+  fillOpacity = 0.7,
+  label = labels,
+  labelOptions = labelOptions(
+    style = list("font-weight" = "normal", padding = "3px 8px"),
+    textsize = "15px",
+    direction = "auto")) %>%
+  addLegend(pal = pal, values = ~base$vacc_per, opacity = 0.7, title = "Vacinados por 100 habitantes",
+            position = "bottomright")
+
+```
+
+### Casos
+
+```{r, warning=FALSE}
+range <- ceiling(max(base$cases_per, na.rm=TRUE) - min(base$cases_per, na.rm=TRUE))
+passo <- range/8
+passo <- round(passo, 3)
+bins <- 0
+for (i in 1:8){
+  t <- i*passo
+  bins <- c(bins, t)
+}
+
+pal <- colorBin("YlOrBr", domain = base$cases_per, bins = bins)
+
+labels <- sprintf(
+  "<strong>%s</strong><br/>%g casos por 100 habitantes",
+  base$id, round(base$cases_per, 2)
+) %>% lapply(htmltools::HTML)
+
+leaflet(brasil,
+               options = leafletOptions(minZoom = 2)) %>%
+  setView(lng = -47.883 , lat = -15.793, zoom = 3.2) %>%
+  addProviderTiles(providers$CartoDB.Positron) %>%
+  addPolygons(
+  fillColor = ~pal(base$cases_per),
+  weight = 2,
+  opacity = 1,
+  color = "white",
+  fillOpacity = 0.7,
+  label = labels,
+  labelOptions = labelOptions(
+    style = list("font-weight" = "normal", padding = "3px 8px"),
+    textsize = "15px",
+    direction = "auto")) %>%
+  addLegend(pal = pal, values = ~base$cases_per, opacity = 0.7, title = "Casos por 100 habitantes",
+            position = "bottomright")
+
+```
+
+### Mortes
+
+```{r, warning=FALSE}
+range <- (max(base$death_per, na.rm=TRUE) - min(base$death_per, na.rm=TRUE))
+passo <- range/8
+passo <- round(passo, 3)
+bins <- 0
+for (i in 1:8){
+  t <- i*passo
+  bins <- c(bins, t)
+}
+
+pal <- colorBin("RdPu", domain = base$death_per, bins = bins)
+
+labels <- sprintf(
+  "<strong>%s</strong><br/>%g mortes por 100 habitantes",
+  base$id, round(base$death_per, 2)
+) %>% lapply(htmltools::HTML)
+
+leaflet(brasil,
+               options = leafletOptions(minZoom = 2)) %>%
+  setView(lng = -47.883 , lat = -15.793, zoom = 3.2) %>%
+  addProviderTiles(providers$CartoDB.Positron) %>%
+  addPolygons(
+  fillColor = ~pal(base$death_per),
+  weight = 2,
+  opacity = 1,
+  color = "white",
+  fillOpacity = 0.7,
+  label = labels,
+  labelOptions = labelOptions(
+    style = list("font-weight" = "normal", padding = "3px 8px"),
+    textsize = "15px",
+    direction = "auto")) %>%
+  addLegend(pal = pal, values = ~base$death_per, opacity = 0.7, title = "Mortes por 100 habitantes",
+            position = "bottomright")
+
+```
+
+Row
+-----------------------------------------------------------------------
+
+### Chart B
+
+```{r}
+
+```
+
+### Chart C
+
+```{r}
+
+```
+
+
