@@ -43,14 +43,72 @@ base <- merge(brasil, temp1, by.x ="id", by.y = "state" )
 
 bins <- c( 0, 0.5, 1, 1.5, 2, 5, 10, 30, 60)
 
-pal <- colorBin("YlGnBu", domain = c(0,60), bins = bins)
+pal <- colorBin("Blues", domain = c(0,60), bins = bins)
 
 labels <- sprintf(
   "<strong>%s</strong><br/>%g vacinados por 100 hab.",
   base$id, round(base$vacc_per, 2)
 ) %>% lapply(htmltools::HTML)
 ```
+```{r, echo=FALSE, message=FALSE}
+mundao <- readOGR("data/countries.geo.json", verbose = FALSE)
+caso_mundo <- read.csv("data/owid-covid-data.csv") 
+caso_mundo$date <- ymd(caso_mundo$date)
 
+temp <- caso_mundo %>% group_by(iso_code) %>%
+  summarise(data = max(date))
+
+temp1 <- merge(temp, caso_mundo, by.x = c("iso_code", "data"), by.y = c("iso_code", "date"), all.x = TRUE)
+base_mundo <- merge(mundao, temp1, by.x ="id", by.y = "iso_code" )
+
+```
+
+Row
+-----------------------------------------------------------------------
+
+### LOREM IPSUM  
+
+Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+
+
+### Brasil: Total de vacinados
+
+```{r}
+valueBox(format(base_mundo$total_vaccinations[which(base_mundo$id == "BRA")],
+                decimal.mark = ",",
+                big.mark = "."),
+         color = "#2271b5",
+         icon = "fa-syringe")
+```
+
+### Brasil: Total de casos
+
+```{r}
+valueBox(format(base_mundo$total_cases [which(base_mundo$id == "BRA")],
+                decimal.mark = ",",
+                big.mark = "."),                
+         color = "#f16914",
+         icon = "fa-ambulance")
+```
+
+### Brasil: Total de mortes
+
+```{r}
+valueBox(format(base_mundo$total_deaths [which(base_mundo$id == "BRA")],
+                decimal.mark = ",",
+                big.mark = "."),
+         color = "#ae217e",
+         icon = "fa-sad-tear")
+```
+
+### Última atualização
+
+```{r}
+valueBox(format(base_mundo$data[which(base_mundo$id == "BRA")],
+         format = "%d/%m/%Y"),
+         color = "#a0a2a3",
+         icon = "fa-clock")
+```
 
 Row 
 -----------------------------------------------------------------------
@@ -97,7 +155,7 @@ leaflet(brasil,
 
 bins <- c(0, 4, 8, 12, 16)
 
-pal <- colorBin("YlOrBr", domain = c(0,16), bins = bins)
+pal <- colorBin("OrRd", domain = c(0,16), bins = bins)
 
 labels <- sprintf(
   "<strong>%s</strong><br/>%g casos por 100 hab.",
@@ -177,15 +235,6 @@ leaflet(brasil,
 
 
 ```{r, echo=FALSE, message=FALSE}
-mundao <- readOGR("data/countries.geo.json", verbose = FALSE)
-caso_mundo <- read.csv("data/owid-covid-data.csv") 
-caso_mundo$date <- ymd(caso_mundo$date)
-
-temp <- caso_mundo %>% group_by(iso_code) %>%
-  summarise(data = max(date))
-
-temp1 <- merge(temp, caso_mundo, by.x = c("iso_code", "data"), by.y = c("iso_code", "date"), all.x = TRUE)
-base_mundo <- merge(mundao, temp1, by.x ="id", by.y = "iso_code" )
 
 #range <- ceiling(max(base_mundo$total_vaccinations_per_hundred, na.rm=TRUE))
 #passo1 <- range/4
@@ -197,7 +246,7 @@ base_mundo <- merge(mundao, temp1, by.x ="id", by.y = "iso_code" )
 
 bins1 <- c( 0, 0.5, 1, 1.5, 2, 5, 10, 30, 60)
 
-pal <- colorBin("YlGnBu", domain = c(0,60), bins = bins1)
+pal <- colorBin("Blues", domain = c(0,60), bins = bins1)
 
 labels <- sprintf(
   "<strong>%s</strong><br/>%g vacinados por 100 hab.",
@@ -230,6 +279,7 @@ leaflet(mundao,
     direction = "auto"))
 ```
 
+
 ### MUNDO CASOS
 
 ```{r}
@@ -245,7 +295,7 @@ leaflet(mundao,
 
 bins <- c(0, 4, 8, 12, 16)
 
-pal <- colorBin("YlOrBr", domain = c(0,16), bins = bins)
+pal <- colorBin("OrRd", domain = c(0,16), bins = bins)
 
 labels <- sprintf(
   "<strong>%s</strong><br/>%g casos por 100 hab.",
