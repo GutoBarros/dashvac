@@ -3,20 +3,21 @@ title: "Vacinação COVID-19 no Brasil e no mundo "
 output: 
   flexdashboard::flex_dashboard:
     orientation: rows
-    vertical_layout: scroll
+    vertical_layout: fill
 ---
 
-```{r setup, include=FALSE}
+```{r setup, include=FALSE, warning=FALSE}
 library(flexdashboard)
 library(leaflet)
 library(tidyverse)
 library(maps)
 library(lubridate)
 library(jsonlite)
+library(rgdal)
 ```
 
-```{r, echo=FALSE}
-brasil <- rgdal::readOGR("data/br-states.json")
+```{r, echo=FALSE, message=FALSE}
+brasil <- readOGR("data/br-states.json", verbose = FALSE)
 
 casos <- read.csv("data/cases-brazil-states.csv")
 casos$vacc_per <- casos$vaccinated_per_100k_inhabitants/1000
@@ -31,7 +32,7 @@ temp <- casos %>% group_by(state) %>%
 temp1 <- merge(temp, casos, by.x = c("state", "data"), by.y = c("state", "date"), all.x = TRUE)
 base <- merge(brasil, temp1, by.x ="id", by.y = "state" )
 
-range <- ceiling(max(base$vacc_per, na.rm=TRUE) - min(base$vacc_per, na.rm=TRUE))
+range <- ceiling(max(base$vacc_per, na.rm=TRUE))
 passo <- range/8
 passo <- round(passo, 3)
 bins <- 0
@@ -52,7 +53,7 @@ labels <- sprintf(
 Row 
 -----------------------------------------------------------------------
 
-### Vacinados
+### BRASIL VACINADOS
 
 ```{r, warning=FALSE}
 leaflet(brasil,
@@ -68,17 +69,22 @@ leaflet(brasil,
   label = labels,
   labelOptions = labelOptions(
     style = list("font-weight" = "normal", padding = "3px 8px"),
-    textsize = "15px",
+    textsize = "14px",
     direction = "auto")) %>%
-  addLegend(pal = pal, values = ~base$vacc_per, opacity = 0.7, title = "Vacinados por 100 habitantes",
+  addLegend(pal = pal,
+            values = ~base$cases_per,
+            opacity = 0.7,
+            title = "Mortes por 100 habitantes",
+            na.label = "Não informado",
+            labFormat = labelFormat(digits = 2,big.mark = " "),
             position = "bottomright")
 
 ```
 
-### Casos
+### BRASIL CASOS
 
 ```{r, warning=FALSE}
-range <- ceiling(max(base$cases_per, na.rm=TRUE) - min(base$cases_per, na.rm=TRUE))
+range <- ceiling(max(base$cases_per, na.rm=TRUE))
 passo <- range/8
 passo <- round(passo, 3)
 bins <- 0
@@ -109,15 +115,20 @@ leaflet(brasil,
     style = list("font-weight" = "normal", padding = "3px 8px"),
     textsize = "15px",
     direction = "auto")) %>%
-  addLegend(pal = pal, values = ~base$cases_per, opacity = 0.7, title = "Casos por 100 habitantes",
+  addLegend(pal = pal,
+            values = ~base$cases_per,
+            opacity = 0.7,
+            title = "Mortes por 100 habitantes",
+            na.label = "Não informado",
+            labFormat = labelFormat(digits = 2,big.mark = " "),
             position = "bottomright")
 
 ```
 
-### Mortes
+### BRASIL MORTES
 
 ```{r, warning=FALSE}
-range <- (max(base$death_per, na.rm=TRUE) - min(base$death_per, na.rm=TRUE))
+range <- (max(base$death_per, na.rm=TRUE))
 passo <- range/8
 passo <- round(passo, 3)
 bins <- 0
@@ -148,24 +159,160 @@ leaflet(brasil,
     style = list("font-weight" = "normal", padding = "3px 8px"),
     textsize = "15px",
     direction = "auto")) %>%
-  addLegend(pal = pal, values = ~base$death_per, opacity = 0.7, title = "Mortes por 100 habitantes",
+  addLegend(pal = pal,
+            values = ~base$cases_per,
+            opacity = 0.7,
+            title = "Mortes por 100 habitantes",
+            na.label = "Não informado",
+            labFormat = labelFormat(digits = 2,big.mark = " "),
             position = "bottomright")
 
 ```
 
+
+```{r, echo=FALSE, message=FALSE}
+mundao <- readOGR("data/countries.geo.json", verbose = FALSE)
+caso_mundo <- read.csv("data/owid-covid-data.csv") 
+caso_mundo$date <- ymd(caso_mundo$date)
+
+temp <- caso_mundo %>% group_by(iso_code) %>%
+  summarise(data = max(date))
+
+temp1 <- merge(temp, caso_mundo, by.x = c("iso_code", "data"), by.y = c("iso_code", "date"), all.x = TRUE)
+base_mundo <- merge(mundao, temp1, by.x ="id", by.y = "iso_code" )
+
+range <- ceiling(max(base_mundo$total_vaccinations_per_hundred, na.rm=TRUE))
+passo1 <- range/8
+bins1 <- 0
+for (i in 1:8){
+  t <- i*passo1
+  bins1 <- c(bins1, t)
+}
+
+pal <- colorBin("YlGnBu", domain = base_mundo$total_vaccinations_per_hundred, bins = bins1)
+
+labels <- sprintf(
+  "<strong>%s</strong><br/>%g vacinados por 100 habitantes",
+  base_mundo$name, round(base_mundo$total_vaccinations_per_hundred, 2)
+) %>% lapply(htmltools::HTML)
+
+```
+
+
 Row
 -----------------------------------------------------------------------
 
-### Chart B
+### MUNDO VACINADOS
 
 ```{r}
-
+leaflet(mundao,
+               options = leafletOptions(minZoom = 1)) %>%
+  setView(lng = -47.883 , lat = -15.793, zoom = 1) %>%
+  addProviderTiles(providers$CartoDB.Positron) %>%
+  addPolygons(
+  fillColor = ~pal(base_mundo$total_vaccinations_per_hundred),
+  weight = 2,
+  opacity = 1,
+  color = "white",
+  fillOpacity = 0.7,
+  label = labels,
+  labelOptions = labelOptions(
+    style = list("font-weight" = "normal", padding = "3px 8px"),
+    textsize = "15px",
+    direction = "auto")) %>%
+  addLegend(pal = pal,
+            values = ~ base_mundo$total_vaccinations_per_hundred,
+            opacity = 0.7,
+            title = "Vacinados por 100 habitantes",
+            na.label = "Não informado",
+            labFormat = labelFormat(digits = 2,big.mark = " "),
+            position = "bottomright")
 ```
 
-### Chart C
+### MUNDO CASOS
 
 ```{r}
+base_mundo$cases_per <- base_mundo$total_cases/base_mundo$population*100
+range <- ceiling(max(base_mundo$cases_per, na.rm=TRUE))
+passo <- range/8
+passo <- round(passo, 3)
+bins <- 0
+for (i in 1:8){
+  t <- i*passo
+  bins <- c(bins, t)
+}
 
+pal <- colorBin("YlOrBr", domain = base_mundo$cases_per, bins = bins)
+
+labels <- sprintf(
+  "<strong>%s</strong><br/>%g casos por 100 habitantes",
+  base_mundo$name, round(base_mundo$cases_per, 2)
+) %>% lapply(htmltools::HTML)
+
+leaflet(mundao,
+               options = leafletOptions(minZoom = 1)) %>%
+  setView(lng = -47.883 , lat = -15.793, zoom = 1) %>%
+  addProviderTiles(providers$CartoDB.Positron) %>%
+  addPolygons(
+  fillColor = ~pal(base_mundo$cases_per),
+  weight = 2,
+  opacity = 1,
+  color = "white",
+  fillOpacity = 0.7,
+  label = labels,
+  labelOptions = labelOptions(
+    style = list("font-weight" = "normal", padding = "3px 8px"),
+    textsize = "15px",
+    direction = "auto")) %>%
+  addLegend(pal = pal,
+            values = ~ base_mundo$cases_per,
+            opacity = 0.7,
+            title = "Casos por 100 habitantes",
+            na.label = "Não informado",
+            labFormat = labelFormat(digits = 2,big.mark = " "),
+            position = "bottomright")
 ```
 
+### MUNDO MORTES
+
+```{r}
+base_mundo$death_per <- base_mundo$total_deaths/base_mundo$population*100
+range <- (max(base_mundo$death_per, na.rm=TRUE))
+passo <- range/8
+passo <- round(passo, 3)
+bins <- 0
+for (i in 1:8){
+  t <- i*passo
+  bins <- c(bins, t)
+}
+
+pal <- colorBin("RdPu", domain = base_mundo$death_per, bins = bins)
+
+labels <- sprintf(
+  "<strong>%s</strong><br/>%g Mortes por 100 habitantes",
+  base_mundo$name, round(base_mundo$death_per, 3)
+) %>% lapply(htmltools::HTML)
+
+leaflet(mundao,
+               options = leafletOptions(minZoom = 1)) %>%
+  setView(lng = -47.883 , lat = -15.793, zoom = 1) %>%
+  addProviderTiles(providers$CartoDB.Positron) %>%
+  addPolygons(
+  fillColor = ~ pal(base_mundo$death_per),
+  weight = 2,
+  opacity = 1,
+  color = "white",
+  fillOpacity = 0.7,
+  label = labels,
+  labelOptions = labelOptions(
+    style = list("font-weight" = "normal", padding = "3px 8px"),
+    textsize = "15px",
+    direction = "auto")) %>%
+  addLegend(pal = pal,
+            values = ~ base_mundo$death_per,
+            opacity = 0.7,
+            title = "Mortes por 100 habitantes",
+            na.label = "Não informado",
+            position = "bottomright")
+```
 
