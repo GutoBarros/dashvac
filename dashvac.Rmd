@@ -2,8 +2,7 @@
 title: "Vacinação COVID-19 no Brasil e no mundo "
 output: 
   flexdashboard::flex_dashboard:
-    orientation: rows
-    vertical_layout: fill
+    vertical_layout: scroll
 ---
 
 ```{r setup, include=FALSE, warning=FALSE}
@@ -63,7 +62,7 @@ base_mundo <- merge(mundao, temp1, by.x ="id", by.y = "iso_code" )
 
 ```
 
-Row
+Column {data-width=200}
 -----------------------------------------------------------------------
 
 ### LOREM IPSUM  
@@ -110,7 +109,8 @@ valueBox(format(base_mundo$data[which(base_mundo$id == "BRA")],
          icon = "fa-clock")
 ```
 
-Row 
+
+Column {data-width=400}
 -----------------------------------------------------------------------
 
 ### BRASIL VACINADOS
@@ -118,8 +118,7 @@ Row
 ```{r, warning=FALSE}
 leaflet(brasil,
                options = leafletOptions(minZoom = 2)) %>%
-  setView(lng = -47.883 , lat = -15.793, zoom = 3.2) %>%
-  addProviderTiles(providers$CartoDB.Positron) %>%
+  setView(lng = -47.883 , lat = -15.793, zoom = 4) %>%
   addPolygons(
   fillColor = ~pal(base$vacc_per),
   weight = 2,
@@ -164,8 +163,7 @@ labels <- sprintf(
 
 leaflet(brasil,
                options = leafletOptions(minZoom = 2)) %>%
-  setView(lng = -47.883 , lat = -15.793, zoom = 3.2) %>%
-  addProviderTiles(providers$CartoDB.Positron) %>%
+  setView(lng = -47.883 , lat = -15.793, zoom = 4) %>%
   addPolygons(
   fillColor = ~pal(base$cases_per),
   weight = 2,
@@ -210,8 +208,7 @@ labels <- sprintf(
 
 leaflet(brasil,
                options = leafletOptions(minZoom = 2)) %>%
-  setView(lng = -47.883 , lat = -15.793, zoom = 3.2) %>%
-  addProviderTiles(providers$CartoDB.Positron) %>%
+  setView(lng = -47.883 , lat = -15.793, zoom = 4) %>%
   addPolygons(
   fillColor = ~pal(base$death_per),
   weight = 2,
@@ -256,7 +253,7 @@ labels <- sprintf(
 ```
 
 
-Row
+Column {data-width=400}
 -----------------------------------------------------------------------
 
 ### MUNDO VACINADOS
@@ -264,8 +261,7 @@ Row
 ```{r}
 leaflet(mundao,
                options = leafletOptions(minZoom = 1)) %>%
-  setView(lng = 0 , lat = 0, zoom = 1) %>%
-  addProviderTiles(providers$CartoDB.Positron) %>%
+  setView(lng = 0 , lat = 15, zoom = 1) %>%
   addPolygons(
   fillColor = ~pal(base_mundo$total_vaccinations_per_hundred),
   weight = 2,
@@ -304,8 +300,7 @@ labels <- sprintf(
 
 leaflet(mundao,
                options = leafletOptions(minZoom = 1)) %>%
-  setView(lng = 0 , lat = 0, zoom = 1) %>%
-  addProviderTiles(providers$CartoDB.Positron) %>%
+  setView(lng = 0 , lat = 15, zoom = 1) %>%
   addPolygons(
   fillColor = ~pal(base_mundo$cases_per),
   weight = 2,
@@ -343,8 +338,7 @@ labels <- sprintf(
 
 leaflet(mundao,
                options = leafletOptions(minZoom = 1)) %>%
-  setView(lng = 0 , lat = 0, zoom = 1) %>%
-  addProviderTiles(providers$CartoDB.Positron) %>%
+  setView(lng = 0 , lat = 15, zoom = 1) %>%
   addPolygons(
   fillColor = ~ pal(base_mundo$death_per),
   weight = 2,
