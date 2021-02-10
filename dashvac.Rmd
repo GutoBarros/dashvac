@@ -3,6 +3,8 @@ title: "Vacinação COVID-19 no Brasil e no mundo "
 output: 
   flexdashboard::flex_dashboard:
     vertical_layout: scroll
+    social: menu
+    source_code: embed
 ---
 
 ```{r setup, include=FALSE, warning=FALSE}
@@ -45,8 +47,8 @@ bins <- c( 0, 0.5, 1, 1.5, 2, 5, 10, 30, 60)
 pal <- colorBin("Blues", domain = c(0,60), bins = bins)
 
 labels <- sprintf(
-  "<strong>%s</strong><br/>%g vacinados por 100 hab.",
-  base$id, round(base$vacc_per, 2)
+  "<strong>%s</strong><br/>%g vacinados por 100 hab.<br/> Atualizado em %s",
+  base$id, round(base$vacc_per, 2), as.character(format(base$data, "%d/%m/%Y"))
 ) %>% lapply(htmltools::HTML)
 ```
 ```{r, echo=FALSE, message=FALSE}
@@ -55,19 +57,33 @@ caso_mundo <- read.csv("data/owid-covid-data.csv")
 caso_mundo$date <- ymd(caso_mundo$date)
 
 temp <- caso_mundo %>% group_by(iso_code) %>%
-  summarise(data = max(date))
+  slice(which.max(total_vaccinations_per_hundred))
 
-temp1 <- merge(temp, caso_mundo, by.x = c("iso_code", "data"), by.y = c("iso_code", "date"), all.x = TRUE)
-base_mundo <- merge(mundao, temp1, by.x ="id", by.y = "iso_code" )
+base_mundo <- merge(mundao, temp, by.x ="id", by.y = "iso_code" )
 
 ```
 
 Column {data-width=200}
 -----------------------------------------------------------------------
 
-### LOREM IPSUM  
+### COMPARAÇÕES FACILITADAS  
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+Ao proporcionar comparações visuais claras e imediatas entre o Brasil e o mundo no que se refere à vacinação e às vítimas do COVID-19, essa página se destaca de outros painéis mais completos e prestigiosos, como [Our World in Data](https://ourworldindata.org/coronavirus) e [Vacinômetro](https://coronavirusbra1.github.io/).
+
+Vacinação, casos e mortes são apresentados como proporções por 100 habitantes e as escalas de cores são as mesmas para o mapa do Brasil e do mundo.
+
+Uma inspeção rápida permite verificar, por exemplo, que a proporção de vacinados no Brasil se equipara aos seus vizinhos da América do Sul mas está bem atrás da América do Norte e Europa. Ou que a taxa de mortes no Amazonas é maior que a de qualquer país tomado como um todo.
+
+**Importante:** os dados são consolidados diariamente, mas pode haver diferenças nas datas de atualização entre os países; verifique a última atualização disponível passando o mouse sobre o país em questão.
+
+**Origem dos dados:**  
+Brasil: https://github.com/wcota/covid19br  
+Mundo: https://github.com/owid/covid-19-data  
+
+**Dataviz por** 
+[Guto Barros](http://www.gutobarros.com.br)
+
+Disponibilizado sob Atribuição 4.0 Internacional (CC BY 4.0)
 
 
 ### Brasil: Total de vacinados
@@ -100,11 +116,10 @@ valueBox(format(base_mundo$total_deaths [which(base_mundo$id == "BRA")],
          icon = "fa-sad-tear")
 ```
 
-### Última atualização
+### Última consolidação
 
 ```{r}
-valueBox(format(base_mundo$data[which(base_mundo$id == "BRA")],
-         format = "%d/%m/%Y"),
+valueBox(format(format(max(base$data), "%d/%m/%Y")),
          color = "#a0a2a3",
          icon = "fa-clock")
 ```
@@ -131,7 +146,7 @@ leaflet(brasil,
     textsize = "14px",
     direction = "auto")) %>%
   addLegend(pal = pal,
-            values = ~base$cases_per,
+            values = ~base$vacc_per,
             opacity = 0.7,
             title = "Vacinas por 100 hab.",
             na.label = "Não informado",
@@ -241,14 +256,14 @@ leaflet(brasil,
 #  bins1 <- c(bins1, t)
 #}
 
-bins1 <- c( 0, 0.5, 1, 1.5, 2, 5, 10, 30, 60)
+bins1 <- c( 0, 0.5, 1, 1.5, 2, 5, 10, 30, 70)
 
-pal <- colorBin("Blues", domain = c(0,60), bins = bins1)
+pal <- colorBin("Blues", domain = c(0,70), bins = bins1)
 
 labels <- sprintf(
-  "<strong>%s</strong><br/>%g vacinados por 100 hab.",
-  base_mundo$name, round(base_mundo$total_vaccinations_per_hundred, 2)
-) %>% lapply(htmltools::HTML)
+  "<strong>%s</strong><br/>%g vacinados por 100 hab.<br/> Atualizado em: %s",
+  base_mundo$name, round(base_mundo$total_vaccinations_per_hundred, 2), as.character(format(base_mundo$date, "%d/%m/%Y"))) %>%
+  lapply(htmltools::HTML)
 
 ```
 
@@ -278,8 +293,9 @@ leaflet(mundao,
 
 ### MUNDO CASOS
 
+
 ```{r}
- base_mundo$cases_per <- base_mundo$total_cases/base_mundo$population*100
+ caso_mundo$cases_per <- caso_mundo$total_cases/caso_mundo$population*100
 # range <- ceiling(max(base_mundo$cases_per, na.rm=TRUE))
 # passo <- range/4
 # passo <- round(passo, 3)
@@ -289,14 +305,19 @@ leaflet(mundao,
 #   bins <- c(bins, t)
 # }
 
+temp <- caso_mundo %>% group_by(iso_code) %>%
+  slice(which.max(cases_per))
+
+base_mundo <- merge(mundao, temp, by.x ="id", by.y = "iso_code" )
+
 bins <- c(0, 4, 8, 12, 16)
 
 pal <- colorBin("OrRd", domain = c(0,16), bins = bins)
 
 labels <- sprintf(
-  "<strong>%s</strong><br/>%g casos por 100 hab.",
-  base_mundo$name, round(base_mundo$cases_per, 2)
-) %>% lapply(htmltools::HTML)
+  "<strong>%s</strong><br/>%g casos por 100 hab. <br/> Última atualização %s",
+  base_mundo$name, round(base_mundo$cases_per, 2), as.character(format(base_mundo$date, "%d/%m/%Y"))) %>%
+  lapply(htmltools::HTML)
 
 leaflet(mundao,
                options = leafletOptions(minZoom = 1)) %>%
@@ -317,7 +338,12 @@ leaflet(mundao,
 ### MUNDO MORTES
 
 ```{r}
- base_mundo$death_per <- base_mundo$total_deaths/base_mundo$population*100
+caso_mundo$death_per <- caso_mundo$total_deaths/caso_mundo$population*100
+
+temp <- caso_mundo %>% group_by(iso_code) %>%
+  slice(which.max(death_per))
+
+base_mundo <- merge(mundao, temp, by.x ="id", by.y = "iso_code" )
 # range <- (max(base_mundo$death_per, na.rm=TRUE))
 # passo <- range/4
 # passo <- round(passo, 3)
@@ -332,9 +358,9 @@ bins <- c(0, 0.05, 0.1, 0.15, 0.2, 0.25)
 pal <- colorBin("RdPu", domain = c(0, 0.25), bins = bins)
 
 labels <- sprintf(
-  "<strong>%s</strong><br/>%g Mortes por 100 hab.",
-  base_mundo$name, round(base_mundo$death_per, 3)
-) %>% lapply(htmltools::HTML)
+  "<strong>%s</strong><br/>%g Mortes por 100 hab.<br/> Última atualização: %s",
+  base_mundo$name, round(base_mundo$death_per, 3), as.character(format(base_mundo$date, "%d/%m/%Y"))) %>%
+  lapply(htmltools::HTML)
 
 leaflet(mundao,
                options = leafletOptions(minZoom = 1)) %>%
@@ -351,4 +377,3 @@ leaflet(mundao,
     textsize = "15px",
     direction = "auto"))
 ```
-
