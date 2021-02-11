@@ -1,0 +1,584 @@
+---
+title: "Vacinação COVID-19 no Brasil e no mundo "
+output: 
+  flexdashboard::flex_dashboard:
+    vertical_layout: fill
+    social: menu
+---
+
+```{r setup, include=FALSE, warning=FALSE}
+library(flexdashboard)
+library(leaflet)
+library(tidyverse)
+library(maps)
+library(lubridate)
+library(jsonlite)
+library(rgdal)
+library(plotly)
+```
+
+```{r, echo=FALSE, message=FALSE}
+brasil <- readOGR("data/br-states.json", verbose = FALSE)
+
+casos <- read.csv("data/cases-brazil-states.csv")
+casos$vacc_per <- casos$vaccinated_per_100k_inhabitants/1000
+casos$death_per <- casos$deaths_per_100k_inhabitants/1000
+casos$cases_per <- casos$totalCases_per_100k_inhabitants/1000
+
+casos$date <- ymd(casos$date)
+
+temp <- casos %>% group_by(state) %>%
+  summarise(data = max(date))
+
+temp1 <- merge(temp, casos, by.x = c("state", "data"), by.y = c("state", "date"), all.x = TRUE)
+base <- merge(brasil, temp1, by.x ="id", by.y = "state" )
+
+```
+```{r, echo=FALSE, message=FALSE}
+mundao <- readOGR("data/countries.geo.json", verbose = FALSE)
+caso_mundo <- read.csv("data/owid-covid-data.csv") 
+caso_mundo$date <- ymd(caso_mundo$date)
+
+temp <- caso_mundo %>% group_by(iso_code) %>%
+  slice(which.max(total_vaccinations_per_hundred))
+
+base_mundo <- merge(mundao, temp, by.x ="id", by.y = "iso_code" )
+
+```
+VACINAÇÃO
+=====================================  
+
+Column {data-width=200}
+-----------------------------------------------------------------------
+
+### COMPARAÇÕES FACILITADAS  
+
+
+Vacinação, casos e mortes por COVID-19 são apresentados como proporções por 100 habitantes. As escalas de cores são as mesmas para o mapa do Brasil e do mundo. Isso permite comparações visuais claras e imediatas entre os estados brasileiros e o mundo. Esse é o defierencial dessa página em relação a outros painéis mais completos e prestigiosos, como [Our World in Data](https://ourworldindata.org/coronavirus) e [Vacinômetro](https://coronavirusbra1.github.io/).
+
+Uma inspeção rápida permite verificar, por exemplo, que a proporção de vacinados no Brasil se equipara aos seus vizinhos da América do Sul mas está bem atrás da América do Norte e Europa. Ou que a taxa de mortes no Amazonas é maior que a de qualquer país tomado como um todo.
+
+**Importante:** os dados são consolidados diariamente, mas pode haver diferenças nas datas de atualização entre os países; verifique a última atualização disponível passando o mouse sobre o país em questão.
+
+**Dados:**  
+Brasil: https://github.com/wcota/covid19br  
+Mundo: https://github.com/owid/covid-19-data  
+
+**Mapas:**  
+Brasil: https://gist.github.com/ruliana/1ccaaab05ea113b0dff3b22be3b4d637    
+Mundo: https://github.com/johan/world.geo.json    
+
+**Dataviz:** 
+[Guto Barros](http://www.gutobarros.com.br)
+
+Disponibilizado sob Atribuição 4.0 Internacional (CC BY 4.0)
+
+
+### Brasil: Total de vacinados
+
+```{r}
+valueBox(format(base_mundo$total_vaccinations[which(base_mundo$id == "BRA")],
+                decimal.mark = ",",
+                big.mark = "."),
+         color = "#004529",
+         icon = "fa-syringe")
+```
+
+### Última consolidação
+
+```{r}
+valueBox(format(format(max(base$data), "%d/%m/%Y")),
+         color = "#a0a2a3",
+         icon = "fa-clock")
+```
+
+
+Column {data-width=300}
+-----------------------------------------------------------------------
+
+### BRASIL: VACINAS POR 100 HABITANTES
+
+```{r, warning=FALSE}
+# range <- ceiling(max(base$vacc_per, na.rm=TRUE))
+# passo <- range/4
+# passo <- round(passo, 3)
+# bins <- 0
+# for (i in 1:4){
+#   t <- i*passo
+#   bins <- c(bins, t)
+# }
+
+bins <- c( 0, 0.5, 1, 1.5, 2, 5, 10, 30, 60)
+
+pal <- colorBin("YlGn", domain = c(0,60), bins = bins)
+
+labels <- sprintf(
+  "<strong>%s</strong><br/>%g vacinados por 100 hab.<br/> Atualizado em %s",
+  base$id, round(base$vacc_per, 2), as.character(format(base$data, "%d/%m/%Y"))
+) %>% lapply(htmltools::HTML)
+
+leaflet(brasil,
+               options = leafletOptions(minZoom = 2)) %>%
+  setView(lng = -54, lat = -15, zoom = 4) %>%
+  addPolygons(
+  fillColor = ~pal(base$vacc_per),
+  weight = 2,
+  opacity = 1,
+  color = "white",
+  fillOpacity = 1,
+  label = labels,
+  labelOptions = labelOptions(
+    style = list("font-weight" = "normal", padding = "3px 8px"),
+    textsize = "14px",
+    direction = "auto")) %>%
+  addLegend(pal = pal,
+            values = ~base$vacc_per,
+            opacity = 1,
+            title = "Vacinas por 100 hab.",
+            na.label = "Não informado",
+            labFormat = labelFormat(digits = 2,big.mark = " "),
+            position = "bottomright")
+
+```
+
+Column {data-width=300}
+-----------------------------------------------------------------------
+
+### MUNDO: VACINAS POR 100 HABITANTES
+
+```{r}
+bins <- c( 0, 0.5, 1, 1.5, 2, 5, 10, 30, 60)
+
+pal <- colorBin("YlGn", domain = c(0,60), bins = bins)
+
+labels <- sprintf(
+  "<strong>%s</strong><br/>%g vacinados por 100 hab.<br/> Atualizado em %s",
+  base_mundo$id, round(base_mundo$total_vaccinations_per_hundred, 2), as.character(format(base_mundo$date, "%d/%m/%Y"))
+) %>% lapply(htmltools::HTML)
+
+
+leaflet(mundao) %>%
+  setView(lng = 0 , lat = 15, zoom = 1) %>%
+  addPolygons(
+  fillColor = ~pal(base_mundo$total_vaccinations_per_hundred),
+  weight = 2,
+  opacity = 1,
+  color = "white",
+  fillOpacity = 1,
+  label = labels,
+  labelOptions = labelOptions(
+    style = list("font-weight" = "normal", padding = "3px 8px"),
+    textsize = "15px",
+    direction = "auto"))
+```
+
+
+
+Column {data-width=200}
+-----------------------------------------------------------------------
+
+### RANKING TOP 50
+
+```{r}
+temp1 <- temp
+temp1$location <- factor(temp1$location,    
+                  levels = temp1$location[order(temp1$total_vaccinations_per_hundred)])
+temp1$bra <- ifelse(temp1$iso_code=="BRA",1,0)
+temp1 <- temp1[c(1:50),]
+
+temp1$text <- with(temp1, paste0("País: ", location, "Vacinas por 100 hab.: ", round(total_vaccinations_per_hundred,2)))
+
+
+p1 <- ggplot(temp1, aes(x=location,
+                        y=total_vaccinations_per_hundred,
+                        fill=bra,
+                        group=1,
+                        text = paste('País: ', temp1$location,
+                  '<br>', round(temp1$total_vaccinations_per_hundred,2), 'vacinados por 100 hab.:', 
+                  '<br>Atualizado em', as.character(format(temp1$date, "%d/%m/%Y"))))) +
+  geom_bar(stat="identity",) +
+  coord_flip() +
+  theme(axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        panel.grid.minor=element_blank(),
+        panel.grid.major=element_blank(),
+        axis.text.y = element_text(hjust=0.0, size=6),
+        legend.position="none") +
+  scale_fill_gradient(low = "#78c679", high = "#004529")
+ggplotly(p1, tooltip = "text")
+```
+
+
+
+
+CASOS
+=====================================  
+
+Column {data-width=200}
+-----------------------------------------------------------------------
+
+### COMPARAÇÕES FACILITADAS  
+
+
+Vacinação, casos e mortes por COVID-19 são apresentados como proporções por 100 habitantes. As escalas de cores são as mesmas para o mapa do Brasil e do mundo. Isso permite comparações visuais claras e imediatas entre os estados brasileiros e o mundo. Esse é o defierencial dessa página em relação a outros painéis mais completos e prestigiosos, como [Our World in Data](https://ourworldindata.org/coronavirus) e [Vacinômetro](https://coronavirusbra1.github.io/).
+
+Uma inspeção rápida permite verificar, por exemplo, que a proporção de vacinados no Brasil se equipara aos seus vizinhos da América do Sul mas está bem atrás da América do Norte e Europa. Ou que a taxa de mortes no Amazonas é maior que a de qualquer país tomado como um todo.
+
+**Importante:** os dados são consolidados diariamente, mas pode haver diferenças nas datas de atualização entre os países; verifique a última atualização disponível passando o mouse sobre o país em questão.
+
+**Dados:**  
+Brasil: https://github.com/wcota/covid19br  
+Mundo: https://github.com/owid/covid-19-data  
+
+**Mapas:**  
+Brasil: https://gist.github.com/ruliana/1ccaaab05ea113b0dff3b22be3b4d637    
+Mundo: https://github.com/johan/world.geo.json    
+
+**Dataviz:** 
+[Guto Barros](http://www.gutobarros.com.br)
+
+Disponibilizado sob Atribuição 4.0 Internacional (CC BY 4.0)
+
+
+### Brasil: Total de casos
+
+```{r}
+valueBox(format(base_mundo$total_cases [which(base_mundo$id == "BRA")],
+                decimal.mark = ",",
+                big.mark = "."),                
+         color = "#f16914",
+         icon = "fa-ambulance")
+```
+
+### Última consolidação
+
+```{r}
+valueBox(format(format(max(base$data), "%d/%m/%Y")),
+         color = "#a0a2a3",
+         icon = "fa-clock")
+```
+
+
+Column {data-width=300}
+-----------------------------------------------------------------------
+
+### BRASIL: CASOS POR 100 HABITANTES
+
+```{r, warning=FALSE}
+# range <- ceiling(max(base$cases_per, na.rm=TRUE))
+# passo <- range/4
+# passo <- round(passo, 3)
+# bins <- 0
+# for (i in 1:4){
+#   t <- i*passo
+#   bins <- c(bins, t)
+# }
+
+bins <- c(0, 4, 8, 12, 16)
+
+pal <- colorBin("OrRd", domain = c(0,16), bins = bins)
+
+labels <- sprintf(
+  "<strong>%s</strong><br/>%g casos por 100 hab.",
+  base$id, round(base$cases_per, 2)
+) %>% lapply(htmltools::HTML)
+
+leaflet(brasil,
+               options = leafletOptions(minZoom = 2)) %>%
+  setView(lng = -54 , lat = -15, zoom = 4) %>%
+  addPolygons(
+  fillColor = ~pal(base$cases_per),
+  weight = 2,
+  opacity = 1,
+  color = "white",
+  fillOpacity = 0.7,
+  label = labels,
+  labelOptions = labelOptions(
+    style = list("font-weight" = "normal", padding = "3px 8px"),
+    textsize = "15px",
+    direction = "auto")) %>%
+  addLegend(pal = pal,
+            values = ~base$cases_per,
+            opacity = 0.7,
+            title = "Casos por 100 hab.",
+            na.label = "Não informado",
+            labFormat = labelFormat(digits = 2,big.mark = " "),
+            position = "bottomright")
+
+```
+
+
+Column {data-width=300}
+-----------------------------------------------------------------------
+
+### MUNDO: CASOS POR 100 HABITANTES
+
+```{r}
+ caso_mundo$cases_per <- caso_mundo$total_cases/caso_mundo$population*100
+
+base_mundo <- merge(mundao, temp, by.x ="id", by.y = "iso_code" )
+# range <- ceiling(max(base_mundo$cases_per, na.rm=TRUE))
+# passo <- range/4
+# passo <- round(passo, 3)
+# bins <- 0
+# for (i in 1:4){
+#   t <- i*passo
+#   bins <- c(bins, t)
+# }
+
+temp <- caso_mundo %>% group_by(iso_code) %>%
+  slice(which.max(cases_per))
+
+base_mundo <- merge(mundao, temp, by.x ="id", by.y = "iso_code" )
+
+bins <- c(0, 4, 8, 12, 16)
+
+pal <- colorBin("OrRd", domain = c(0,16), bins = bins)
+
+labels <- sprintf(
+  "<strong>%s</strong><br/>%g casos por 100 hab. <br/> Atualizado em %s",
+  base_mundo$name, round(base_mundo$cases_per, 2), as.character(format(base_mundo$date, "%d/%m/%Y"))) %>%
+  lapply(htmltools::HTML)
+
+leaflet(mundao,
+               options = leafletOptions(minZoom = 1)) %>%
+  setView(lng = 0 , lat = 15, zoom = 1) %>%
+  addPolygons(
+  fillColor = ~pal(base_mundo$cases_per),
+  weight = 2,
+  opacity = 1,
+  color = "white",
+  fillOpacity = 0.7,
+  label = labels,
+  labelOptions = labelOptions(
+    style = list("font-weight" = "normal", padding = "3px 8px"),
+    textsize = "15px",
+    direction = "auto"))
+```
+
+Column {data-width=200}
+-----------------------------------------------------------------------
+
+### RANKING TOP 50
+
+```{r}
+temp1 <- temp
+temp1$location <- factor(temp1$location,    
+                  levels = temp1$location[order(temp1$cases_per)])
+temp1$bra <- ifelse(temp1$iso_code=="BRA",1,0)
+temp1 <- temp1[c(1:50),]
+
+
+
+p1 <- ggplot(temp1, aes(x=location,
+                        y=cases_per,
+                        fill=bra,
+                        group=1,
+                        text = paste('País: ', temp1$location,
+                  '<br>', round(temp1$cases_per,2), 'vacinados por 100 hab.:', 
+                  '<br>Atualizado em', as.character(format(temp1$date, "%d/%m/%Y"))))) +
+  geom_bar(stat="identity") +
+  coord_flip() +
+  theme(axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        panel.grid.minor=element_blank(),
+        panel.grid.major=element_blank(),
+        axis.text.y = element_text(hjust=0.0, size=6),
+        legend.position="none") +
+  scale_fill_gradient(low = "#fcd9ab", high = "#f16914")
+ggplotly(p1, tooltip = "text")
+```
+
+MORTES
+=====================================  
+
+Column {data-width=200}
+-----------------------------------------------------------------------
+
+### COMPARAÇÕES FACILITADAS  
+
+
+Vacinação, casos e mortes por COVID-19 são apresentados como proporções por 100 habitantes. As escalas de cores são as mesmas para o mapa do Brasil e do mundo. Isso permite comparações visuais claras e imediatas entre os estados brasileiros e o mundo. Esse é o defierencial dessa página em relação a outros painéis mais completos e prestigiosos, como [Our World in Data](https://ourworldindata.org/coronavirus) e [Vacinômetro](https://coronavirusbra1.github.io/).
+
+Uma inspeção rápida permite verificar, por exemplo, que a proporção de vacinados no Brasil se equipara aos seus vizinhos da América do Sul mas está bem atrás da América do Norte e Europa. Ou que a taxa de mortes no Amazonas é maior que a de qualquer país tomado como um todo.
+
+**Importante:** os dados são consolidados diariamente, mas pode haver diferenças nas datas de atualização entre os países; verifique a última atualização disponível passando o mouse sobre o país em questão.
+
+**Dados:**  
+Brasil: https://github.com/wcota/covid19br  
+Mundo: https://github.com/owid/covid-19-data  
+
+**Mapas:**  
+Brasil: https://gist.github.com/ruliana/1ccaaab05ea113b0dff3b22be3b4d637    
+Mundo: https://github.com/johan/world.geo.json    
+
+**Dataviz:** 
+[Guto Barros](http://www.gutobarros.com.br)
+
+Disponibilizado sob Atribuição 4.0 Internacional (CC BY 4.0)
+
+
+### Brasil: Total de mortes
+
+```{r}
+valueBox(format(base_mundo$total_deaths [which(base_mundo$id == "BRA")],
+                decimal.mark = ",",
+                big.mark = "."),
+         color = "#ae217e",
+         icon = "fa-sad-tear")
+```
+
+### Última consolidação
+
+```{r}
+valueBox(format(format(max(base$data), "%d/%m/%Y")),
+         color = "#a0a2a3",
+         icon = "fa-clock")
+```
+
+
+Column {data-width=300}
+-----------------------------------------------------------------------
+
+### BRASIL: MORTES POR 100 HABITANTES
+
+```{r, warning=FALSE}
+# range <- (max(base$death_per, na.rm=TRUE))
+# passo <- range/4
+# passo <- round(passo, 3)
+# bins <- 0
+# for (i in 1:4){
+#   t <- i*passo
+#   bins <- c(bins, t)
+# }
+
+bins <- c(0, 0.05, 0.1, 0.15, 0.2, 0.25)
+
+pal <- colorBin("RdPu", domain = c(0,0.25), bins = bins)
+
+labels <- sprintf(
+  "<strong>%s</strong><br/>%g mortes por 100 hab.",
+  base$id, round(base$death_per, 2)
+) %>% lapply(htmltools::HTML)
+
+leaflet(brasil,
+               options = leafletOptions(minZoom = 2)) %>%
+  setView(lng = -54 , lat = -15, zoom = 4) %>%
+  addPolygons(
+  fillColor = ~pal(base$death_per),
+  weight = 2,
+  opacity = 1,
+  color = "white",
+  fillOpacity = 0.7,
+  label = labels,
+  labelOptions = labelOptions(
+    style = list("font-weight" = "normal", padding = "3px 8px"),
+    textsize = "15px",
+    direction = "auto")) %>%
+  addLegend(pal = pal,
+            values = ~base$cases_per,
+            opacity = 0.7,
+            title = "Mortes por 100 hab.",
+            na.label = "Não informado",
+            labFormat = labelFormat(digits = 2,big.mark = " "),
+            position = "bottomright")
+
+```
+
+Column {data-width=300}
+-----------------------------------------------------------------------
+
+```{r, echo=FALSE, message=FALSE}
+
+#range <- ceiling(max(base_mundo$total_vaccinations_per_hundred, na.rm=TRUE))
+#passo1 <- range/4
+#bins1 <- 0
+#for (i in 1:4){
+#  t <- i*passo1
+#  bins1 <- c(bins1, t)
+#}
+
+bins1 <- c( 0, 0.5, 1, 1.5, 2, 5, 10, 30, 70)
+
+pal <- colorBin("YlGn", domain = c(0,70), bins = bins1)
+
+labels <- sprintf(
+  "<strong>%s</strong><br/>%g vacinados por 100 hab.<br/> Atualizado em: %s",
+  base_mundo$name, round(base_mundo$total_vaccinations_per_hundred, 2), as.character(format(base_mundo$date, "%d/%m/%Y"))) %>%
+  lapply(htmltools::HTML)
+
+```
+
+### MUNDO: MORTES POR 100 HABITANTES
+
+```{r}
+caso_mundo$death_per <- caso_mundo$total_deaths/caso_mundo$population*100
+
+temp <- caso_mundo %>% group_by(iso_code) %>%
+  slice(which.max(death_per))
+
+base_mundo <- merge(mundao, temp, by.x ="id", by.y = "iso_code" )
+# range <- (max(base_mundo$death_per, na.rm=TRUE))
+# passo <- range/4
+# passo <- round(passo, 3)
+# bins <- 0
+# for (i in 1:4){
+#   t <- i*passo
+#   bins <- c(bins, t)
+# }
+
+bins <- c(0, 0.05, 0.1, 0.15, 0.2, 0.25)
+
+pal <- colorBin("RdPu", domain = c(0, 0.25), bins = bins)
+
+labels <- sprintf(
+  "<strong>%s</strong><br/>%g Mortes por 100 hab.<br/> Atualizado em %s",
+  base_mundo$name, round(base_mundo$death_per, 3), as.character(format(base_mundo$date, "%d/%m/%Y"))) %>%
+  lapply(htmltools::HTML)
+
+leaflet(mundao,
+               options = leafletOptions(minZoom = 1)) %>%
+  setView(lng = 0 , lat = 15, zoom = 1) %>%
+  addPolygons(
+  fillColor = ~ pal(base_mundo$death_per),
+  weight = 2,
+  opacity = 1,
+  color = "white",
+  fillOpacity = 0.7,
+  label = labels,
+  labelOptions = labelOptions(
+    style = list("font-weight" = "normal", padding = "3px 8px"),
+    textsize = "15px",
+    direction = "auto"))
+```
+Column {data-width=200}
+-----------------------------------------------------------------------
+
+### RANKING TOP 50
+
+```{r}
+temp1 <- temp
+temp1$location <- factor(temp1$location,    
+                  levels = temp1$location[order(temp1$death_per)])
+temp1$bra <- ifelse(temp1$iso_code=="BRA",1,0)
+temp1 <- temp1[c(1:50),]
+
+
+p1 <- ggplot(temp1, aes(x=location,
+                        y=death_per,
+                        fill=bra,
+                        group=1,
+                        text = paste('País: ', temp1$location,
+                  '<br>', round(temp1$death_per,2), 'vacinados por 100 hab.:', 
+                  '<br>Atualizado em', as.character(format(temp1$date, "%d/%m/%Y"))))) +
+  geom_bar(stat="identity",) +
+  coord_flip() +
+  theme(axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        panel.grid.minor=element_blank(),
+        panel.grid.major=element_blank(),
+        axis.text.y = element_text(hjust=0.0, size=6),
+        legend.position="none")+
+  scale_fill_gradient(low = "#f794bb", high = "#ae217e")
+ggplotly(p1, tooltip = "text")
+```
