@@ -1,5 +1,5 @@
 ---
-title: "Vacinação COVID-19 no Brasil e no mundo "
+title: "Vacinação COVID-19"
 output: 
   flexdashboard::flex_dashboard:
     vertical_layout: fill
@@ -51,7 +51,7 @@ VACINAÇÃO
 Column {data-width=200}
 -----------------------------------------------------------------------
 
-### COMPARAÇÕES FACILITADAS  
+### COMPARAÇÕES FACILITADAS  {.no-mobile}
 
 
 Vacinação, casos e mortes por COVID-19 são apresentados como proporções por 100 habitantes. As escalas de cores são as mesmas para o mapa do Brasil e do mundo. Isso permite comparações visuais claras e imediatas entre os estados brasileiros e o mundo. Esse é o defierencial dessa página em relação a outros painéis mais completos e prestigiosos, como [Our World in Data](https://ourworldindata.org/coronavirus) e [Vacinômetro](https://coronavirusbra1.github.io/).
@@ -61,12 +61,12 @@ Uma inspeção rápida permite verificar, por exemplo, que a proporção de vaci
 **Importante:** os dados são consolidados diariamente, mas pode haver diferenças nas datas de atualização entre os países; verifique a última atualização disponível passando o mouse sobre o país em questão.
 
 **Dados:**  
-Brasil: https://github.com/wcota/covid19br  
-Mundo: https://github.com/owid/covid-19-data  
+Brasil: [coronavirusbra1](https://github.com/wcota/covid19br)     
+Mundo: [Our World in Data](https://github.com/owid/covid-19-data)     
 
 **Mapas:**  
-Brasil: https://gist.github.com/ruliana/1ccaaab05ea113b0dff3b22be3b4d637    
-Mundo: https://github.com/johan/world.geo.json    
+[Brasil](https://gist.github.com/ruliana/1ccaaab05ea113b0dff3b22be3b4d637)      
+[Mundo](https://github.com/johan/world.geo.json)      
 
 **Dataviz:** 
 [Guto Barros](http://www.gutobarros.com.br)
@@ -74,7 +74,7 @@ Mundo: https://github.com/johan/world.geo.json
 Disponibilizado sob Atribuição 4.0 Internacional (CC BY 4.0)
 
 
-### Brasil: Total de vacinados
+### Brasil: Total de vacinas
 
 ```{r}
 valueBox(format(base_mundo$total_vaccinations[which(base_mundo$id == "BRA")],
@@ -108,12 +108,12 @@ Column {data-width=300}
 #   bins <- c(bins, t)
 # }
 
-bins <- c( 0, 0.5, 1, 1.5, 2, 5, 10, 30, 60)
+bins <- c( 0, 1, 2, 5, 10, 20, 40, 60, 80, 100)
 
-pal <- colorBin("YlGn", domain = c(0,60), bins = bins)
+pal <- colorBin("YlGn", domain = c(0,100), bins = bins)
 
 labels <- sprintf(
-  "<strong>%s</strong><br/>%g vacinados por 100 hab.<br/> Atualizado em %s",
+  "<strong>%s</strong><br/>%g vacinas por 100 hab.<br/> Atualizado em %s",
   base$id, round(base$vacc_per, 2), as.character(format(base$data, "%d/%m/%Y"))
 ) %>% lapply(htmltools::HTML)
 
@@ -147,13 +147,13 @@ Column {data-width=300}
 ### MUNDO: VACINAS POR 100 HABITANTES
 
 ```{r}
-bins <- c( 0, 0.5, 1, 1.5, 2, 5, 10, 30, 60)
+bins <- c( 0, 1, 2, 5, 10, 20, 40, 60, 80, 100)
 
-pal <- colorBin("YlGn", domain = c(0,60), bins = bins)
+pal <- colorBin("YlGn", domain = c(0,100), bins = bins)
 
 labels <- sprintf(
-  "<strong>%s</strong><br/>%g vacinados por 100 hab.<br/> Atualizado em %s",
-  base_mundo$id, round(base_mundo$total_vaccinations_per_hundred, 2), as.character(format(base_mundo$date, "%d/%m/%Y"))
+  "<strong>%s</strong><br/>%g vacinas por 100 hab.<br/> Atualizado em %s",
+  base_mundo$location, round(base_mundo$total_vaccinations_per_hundred, 2), as.character(format(base_mundo$date, "%d/%m/%Y"))
 ) %>% lapply(htmltools::HTML)
 
 
@@ -184,6 +184,7 @@ temp1 <- temp
 temp1$location <- factor(temp1$location,    
                   levels = temp1$location[order(temp1$total_vaccinations_per_hundred)])
 temp1$bra <- ifelse(temp1$iso_code=="BRA",1,0)
+temp1 <- temp1[order(-temp1$total_vaccinations_per_hundred), ]
 temp1 <- temp1[c(1:50),]
 
 temp1$text <- with(temp1, paste0("País: ", location, "Vacinas por 100 hab.: ", round(total_vaccinations_per_hundred,2)))
@@ -194,7 +195,7 @@ p1 <- ggplot(temp1, aes(x=location,
                         fill=bra,
                         group=1,
                         text = paste('País: ', temp1$location,
-                  '<br>', round(temp1$total_vaccinations_per_hundred,2), 'vacinados por 100 hab.:', 
+                  '<br>', round(temp1$total_vaccinations_per_hundred,2), 'vacinas por 100 hab.', 
                   '<br>Atualizado em', as.character(format(temp1$date, "%d/%m/%Y"))))) +
   geom_bar(stat="identity",) +
   coord_flip() +
@@ -209,15 +210,7 @@ ggplotly(p1, tooltip = "text")
 ```
 
 
-
-
-CASOS
-=====================================  
-
-Column {data-width=200}
------------------------------------------------------------------------
-
-### COMPARAÇÕES FACILITADAS  
+### COMPARAÇÕES FACILITADAS {.mobile}
 
 
 Vacinação, casos e mortes por COVID-19 são apresentados como proporções por 100 habitantes. As escalas de cores são as mesmas para o mapa do Brasil e do mundo. Isso permite comparações visuais claras e imediatas entre os estados brasileiros e o mundo. Esse é o defierencial dessa página em relação a outros painéis mais completos e prestigiosos, como [Our World in Data](https://ourworldindata.org/coronavirus) e [Vacinômetro](https://coronavirusbra1.github.io/).
@@ -227,12 +220,43 @@ Uma inspeção rápida permite verificar, por exemplo, que a proporção de vaci
 **Importante:** os dados são consolidados diariamente, mas pode haver diferenças nas datas de atualização entre os países; verifique a última atualização disponível passando o mouse sobre o país em questão.
 
 **Dados:**  
-Brasil: https://github.com/wcota/covid19br  
-Mundo: https://github.com/owid/covid-19-data  
+Brasil: [coronavirusbra1](https://github.com/wcota/covid19br)     
+Mundo: [Our World in Data](https://github.com/owid/covid-19-data)     
 
 **Mapas:**  
-Brasil: https://gist.github.com/ruliana/1ccaaab05ea113b0dff3b22be3b4d637    
-Mundo: https://github.com/johan/world.geo.json    
+[Brasil](https://gist.github.com/ruliana/1ccaaab05ea113b0dff3b22be3b4d637)      
+[Mundo](https://github.com/johan/world.geo.json)      
+
+**Dataviz:** 
+[Guto Barros](http://www.gutobarros.com.br)
+
+Disponibilizado sob Atribuição 4.0 Internacional (CC BY 4.0)
+
+
+
+
+CASOS
+=====================================  
+
+Column {data-width=200}
+-----------------------------------------------------------------------
+
+### COMPARAÇÕES FACILITADAS {.no-mobile}
+
+
+Vacinação, casos e mortes por COVID-19 são apresentados como proporções por 100 habitantes. As escalas de cores são as mesmas para o mapa do Brasil e do mundo. Isso permite comparações visuais claras e imediatas entre os estados brasileiros e o mundo. Esse é o defierencial dessa página em relação a outros painéis mais completos e prestigiosos, como [Our World in Data](https://ourworldindata.org/coronavirus) e [Vacinômetro](https://coronavirusbra1.github.io/).
+
+Uma inspeção rápida permite verificar, por exemplo, que a proporção de vacinados no Brasil se equipara aos seus vizinhos da América do Sul mas está bem atrás da América do Norte e Europa. Ou que a taxa de mortes no Amazonas é maior que a de qualquer país tomado como um todo.
+
+**Importante:** os dados são consolidados diariamente, mas pode haver diferenças nas datas de atualização entre os países; verifique a última atualização disponível passando o mouse sobre o país em questão.
+
+**Dados:**  
+Brasil: [coronavirusbra1](https://github.com/wcota/covid19br)     
+Mundo: [Our World in Data](https://github.com/owid/covid-19-data)     
+
+**Mapas:**  
+[Brasil](https://gist.github.com/ruliana/1ccaaab05ea113b0dff3b22be3b4d637)      
+[Mundo](https://github.com/johan/world.geo.json)      
 
 **Dataviz:** 
 [Guto Barros](http://www.gutobarros.com.br)
@@ -366,6 +390,7 @@ temp1 <- temp
 temp1$location <- factor(temp1$location,    
                   levels = temp1$location[order(temp1$cases_per)])
 temp1$bra <- ifelse(temp1$iso_code=="BRA",1,0)
+temp1 <- temp1[order(-temp1$cases_per), ]
 temp1 <- temp1[c(1:50),]
 
 
@@ -375,7 +400,7 @@ p1 <- ggplot(temp1, aes(x=location,
                         fill=bra,
                         group=1,
                         text = paste('País: ', temp1$location,
-                  '<br>', round(temp1$cases_per,2), 'vacinados por 100 hab.:', 
+                  '<br>', round(temp1$cases_per,2), 'casos por 100 hab.:', 
                   '<br>Atualizado em', as.character(format(temp1$date, "%d/%m/%Y"))))) +
   geom_bar(stat="identity") +
   coord_flip() +
@@ -389,13 +414,8 @@ p1 <- ggplot(temp1, aes(x=location,
 ggplotly(p1, tooltip = "text")
 ```
 
-MORTES
-=====================================  
 
-Column {data-width=200}
------------------------------------------------------------------------
-
-### COMPARAÇÕES FACILITADAS  
+### COMPARAÇÕES FACILITADAS  {.mobile}
 
 
 Vacinação, casos e mortes por COVID-19 são apresentados como proporções por 100 habitantes. As escalas de cores são as mesmas para o mapa do Brasil e do mundo. Isso permite comparações visuais claras e imediatas entre os estados brasileiros e o mundo. Esse é o defierencial dessa página em relação a outros painéis mais completos e prestigiosos, como [Our World in Data](https://ourworldindata.org/coronavirus) e [Vacinômetro](https://coronavirusbra1.github.io/).
@@ -405,12 +425,43 @@ Uma inspeção rápida permite verificar, por exemplo, que a proporção de vaci
 **Importante:** os dados são consolidados diariamente, mas pode haver diferenças nas datas de atualização entre os países; verifique a última atualização disponível passando o mouse sobre o país em questão.
 
 **Dados:**  
-Brasil: https://github.com/wcota/covid19br  
-Mundo: https://github.com/owid/covid-19-data  
+Brasil: [coronavirusbra1](https://github.com/wcota/covid19br)     
+Mundo: [Our World in Data](https://github.com/owid/covid-19-data)     
 
 **Mapas:**  
-Brasil: https://gist.github.com/ruliana/1ccaaab05ea113b0dff3b22be3b4d637    
-Mundo: https://github.com/johan/world.geo.json    
+[Brasil](https://gist.github.com/ruliana/1ccaaab05ea113b0dff3b22be3b4d637)      
+[Mundo](https://github.com/johan/world.geo.json)      
+
+**Dataviz:** 
+[Guto Barros](http://www.gutobarros.com.br)
+
+Disponibilizado sob Atribuição 4.0 Internacional (CC BY 4.0)
+
+
+
+
+MORTES
+=====================================  
+
+Column {data-width=200}
+-----------------------------------------------------------------------
+
+### COMPARAÇÕES FACILITADAS  {.no-mobile}
+
+
+Vacinação, casos e mortes por COVID-19 são apresentados como proporções por 100 habitantes. As escalas de cores são as mesmas para o mapa do Brasil e do mundo. Isso permite comparações visuais claras e imediatas entre os estados brasileiros e o mundo. Esse é o defierencial dessa página em relação a outros painéis mais completos e prestigiosos, como [Our World in Data](https://ourworldindata.org/coronavirus) e [Vacinômetro](https://coronavirusbra1.github.io/).
+
+Uma inspeção rápida permite verificar, por exemplo, que a proporção de vacinados no Brasil se equipara aos seus vizinhos da América do Sul mas está bem atrás da América do Norte e Europa. Ou que a taxa de mortes no Amazonas é maior que a de qualquer país tomado como um todo.
+
+**Importante:** os dados são consolidados diariamente, mas pode haver diferenças nas datas de atualização entre os países; verifique a última atualização disponível passando o mouse sobre o país em questão.
+
+**Dados:**  
+Brasil: [coronavirusbra1](https://github.com/wcota/covid19br)   
+Mundo: [Our World in Data](https://github.com/owid/covid-19-data)   
+
+**Mapas:**  
+[Brasil](https://gist.github.com/ruliana/1ccaaab05ea113b0dff3b22be3b4d637)      
+[Mundo](https://github.com/johan/world.geo.json)      
 
 **Dataviz:** 
 [Guto Barros](http://www.gutobarros.com.br)
@@ -452,9 +503,9 @@ Column {data-width=300}
 #   bins <- c(bins, t)
 # }
 
-bins <- c(0, 0.05, 0.1, 0.15, 0.2, 0.25)
+bins <- c(0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.30)
 
-pal <- colorBin("RdPu", domain = c(0,0.25), bins = bins)
+pal <- colorBin("RdPu", domain = c(0,0.30), bins = bins)
 
 labels <- sprintf(
   "<strong>%s</strong><br/>%g mortes por 100 hab.",
@@ -503,7 +554,7 @@ bins1 <- c( 0, 0.5, 1, 1.5, 2, 5, 10, 30, 70)
 pal <- colorBin("YlGn", domain = c(0,70), bins = bins1)
 
 labels <- sprintf(
-  "<strong>%s</strong><br/>%g vacinados por 100 hab.<br/> Atualizado em: %s",
+  "<strong>%s</strong><br/>%g mortes por 100 hab.<br/> Atualizado em: %s",
   base_mundo$name, round(base_mundo$total_vaccinations_per_hundred, 2), as.character(format(base_mundo$date, "%d/%m/%Y"))) %>%
   lapply(htmltools::HTML)
 
@@ -532,7 +583,7 @@ bins <- c(0, 0.05, 0.1, 0.15, 0.2, 0.25)
 pal <- colorBin("RdPu", domain = c(0, 0.25), bins = bins)
 
 labels <- sprintf(
-  "<strong>%s</strong><br/>%g Mortes por 100 hab.<br/> Atualizado em %s",
+  "<strong>%s</strong><br/>%g mortes por 100 hab.<br/> Atualizado em %s",
   base_mundo$name, round(base_mundo$death_per, 3), as.character(format(base_mundo$date, "%d/%m/%Y"))) %>%
   lapply(htmltools::HTML)
 
@@ -561,6 +612,7 @@ temp1 <- temp
 temp1$location <- factor(temp1$location,    
                   levels = temp1$location[order(temp1$death_per)])
 temp1$bra <- ifelse(temp1$iso_code=="BRA",1,0)
+temp1 <- temp1[order(-temp1$death_per), ]
 temp1 <- temp1[c(1:50),]
 
 
@@ -569,7 +621,7 @@ p1 <- ggplot(temp1, aes(x=location,
                         fill=bra,
                         group=1,
                         text = paste('País: ', temp1$location,
-                  '<br>', round(temp1$death_per,2), 'vacinados por 100 hab.:', 
+                  '<br>', round(temp1$death_per,2), 'mortes por 100 hab.:', 
                   '<br>Atualizado em', as.character(format(temp1$date, "%d/%m/%Y"))))) +
   geom_bar(stat="identity",) +
   coord_flip() +
@@ -582,3 +634,27 @@ p1 <- ggplot(temp1, aes(x=location,
   scale_fill_gradient(low = "#f794bb", high = "#ae217e")
 ggplotly(p1, tooltip = "text")
 ```
+
+
+### COMPARAÇÕES FACILITADAS  {.mobile}
+
+
+Vacinação, casos e mortes por COVID-19 são apresentados como proporções por 100 habitantes. As escalas de cores são as mesmas para o mapa do Brasil e do mundo. Isso permite comparações visuais claras e imediatas entre os estados brasileiros e o mundo. Esse é o defierencial dessa página em relação a outros painéis mais completos e prestigiosos, como [Our World in Data](https://ourworldindata.org/coronavirus) e [Vacinômetro](https://coronavirusbra1.github.io/).
+
+Uma inspeção rápida permite verificar, por exemplo, que a proporção de vacinados no Brasil se equipara aos seus vizinhos da América do Sul mas está bem atrás da América do Norte e Europa. Ou que a taxa de mortes no Amazonas é maior que a de qualquer país tomado como um todo.
+
+**Importante:** os dados são consolidados diariamente, mas pode haver diferenças nas datas de atualização entre os países; verifique a última atualização disponível passando o mouse sobre o país em questão.
+
+**Dados:**  
+Brasil: [coronavirusbra1](https://github.com/wcota/covid19br)   
+Mundo: [Our World in Data](https://github.com/owid/covid-19-data)   
+
+**Mapas:**  
+[Brasil](https://gist.github.com/ruliana/1ccaaab05ea113b0dff3b22be3b4d637)      
+[Mundo](https://github.com/johan/world.geo.json)      
+
+**Dataviz:** 
+[Guto Barros](http://www.gutobarros.com.br)
+
+Disponibilizado sob Atribuição 4.0 Internacional (CC BY 4.0)
+
